@@ -335,24 +335,3 @@ titi.time_series'''
 #   titi=pysdmx.query_rest('http://sdw-ws.ecb.europa.eu/Dataflow')
 
 ECB = SDMX_RESTECB('http://sdw-ws.ecb.europa.eu','ECB')
-#toto=pysdmx.ECB.dataflow()
-# toto.all_dataflows
-#toto=ECB.dataflow()
-#toto=ECB.dataflow('EXR')
-#print(toto.all_dataflows)
-
-#toto=ECB.data_extraction('EXR','M','GBP','2008-01','2010-12')
-#pudb.set_trace()
-#toto.time_series
-
-#Codelist
-#toto=ECB.data_codelist('CL_FREQ')
-#toto=ECB.data_codelist('CL_FREQ')
-
-#concept
-#toto=ECB.data_concept('FREQ')
-#toto=ECB.data_concept()
-
-#categories
-toto=ECB.data_categoryscheme('SDW_ECONOMIC_CONCEPTS')
-print(toto.codes)
