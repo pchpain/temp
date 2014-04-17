@@ -350,13 +350,6 @@ class SDMX_REST(object):
                + resource) 
         return Categoryscheme(query_rest(url))
 
-    def data_definition(self, flowRef):
-        resource = 'CodeList'
-        url = (self.sdmx_url + '/'
-               + resource + '/' 
-               + flowRef)
-        return DSD(query_rest(url))
-
 
 ECB = SDMX_REST('http://sdw-ws.ecb.europa.eu','ECB')
 
