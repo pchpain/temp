@@ -8,10 +8,7 @@ import lxml.etree
 import uuid
 import datetime
 import numpy
-import logging
-import pudb #
-import pdb #
-
+import ipdb
 
 def date_parser(date, frequency):
     if frequency == 'A':
@@ -25,8 +22,7 @@ def date_parser(date, frequency):
 
 
 def query_rest(url):
-    logging.basicConfig( level=logging.DEBUG, format='%(asctime)s %(levelname)s  %(message)s')#
-    #pudb.set_trace()
+
     request = requests.get(url, timeout= 20)
     if request.status_code != requests.codes.ok:
         raise ValueError("Error getting client({})".format(request.status_code))      
@@ -36,7 +32,7 @@ def query_rest(url):
             request.text.encode('utf-8'), parser=parser)
 
 
-class Codelist(object): # done
+class Codelist(object): 
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._codes = None
@@ -65,14 +61,13 @@ class Codelist(object): # done
         return self._codes
 
 
-class Dataflows(object):  # ok
+class Dataflows(object):  
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._all_dataflows = None
 
     @property
     def all_dataflows(self):  
-        #pudb.set_trace()
         if not self._all_dataflows:
             self._all_dataflows = {}
             for dataflow in self.tree.iterfind(".//structure:Dataflow",
@@ -80,7 +75,6 @@ class Dataflows(object):  # ok
                 id = dataflow.get('id')
                 agencyID = dataflow.get('agencyID')
                 version = dataflow.get('version')
-                #Keyfamilyref = {}
                 name = dataflow.xpath('.//structure:Name', namespaces=self.tree.nsmap)[0].text
                 for keyfamilyref in dataflow.iterfind(".//structure:KeyFamilyRef",
                         namespaces=self.tree.nsmap):
@@ -94,7 +88,7 @@ class Dataflows(object):  # ok
                 return self._all_dataflows
 
 
-class Data(object):#ok
+class Data(object):
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._time_series = None
@@ -144,15 +138,34 @@ class Data(object):#ok
                     self._time_series[str(uuid.uuid1())] = (codes, time_series_)
         return self._time_series
 
+class Wsdl(object): #TODO 
+    def __init__(self, SDMXML):
+        self.tree = SDMXML
+        self._wsdldata = None
+    @property
+    def wsdldata(self):  
+        if not self._wsdldata:
+            self._wsdldata = {}
+            #pdb.set_trace() 
+            for message in self.tree.iterfind(".//xsd:schema",namespaces={'xsd':self.tree.nsmap['xsd']}):
+            #pdb.set_trace() 
+                #nameid = message.get('namepace)
+                #print(nameid)
+                for part in  message.iterfind('.//xsd:import',
+                        namespaces={'xsd':self.tree.nsmap['xsd']}):
+                    namespace = part.get('namespace')
+                    schemalocation= part.get('schemaLocation')
+                    self._wsdldata[namespace] = (namespace,schemalocation)
+        return self._wsdldata
 
-class Concept(object):  # ok
+class Concept(object):  
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._concept = None
 
     @property
-    def conceptdata(self):  #ok
-        #pudb.set_trace()
+    def conceptdata(self):  
+
         if not self._concept:
             self._concept = {}
             for concept in self.tree.iterfind(".//structure:Concept",
@@ -165,7 +178,7 @@ class Concept(object):  # ok
         return self._concept
 
 
-class Keyfamily(object): # done
+class Keyfamily(object): 
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._codes = None
@@ -194,12 +207,11 @@ class Keyfamily(object): # done
         return self._codes
 
 
-class Categoryscheme(object): # done
+class Categoryscheme(object): 
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._category = None
 
-    #def walktree
 
     @property
     def codes(self):
@@ -221,22 +233,19 @@ class Categoryscheme(object): # done
                                 namespaces=self.tree.nsmap)
                         code_name = code_name[0]
                         dataflowref=[]
-                        #pdb.set_trace()
-                        #for dataflow in
-                        #code_.iterchildren('DataflowRef'):#todo
-                        for dataflow in code_.iterfind(".//structure:DataflowRef", namespaces=self.tree.nsmap):
+                        for dataflow in code_.iterfind(".//structure:DataflowRef", namespaces=self.tree.nsmap): #iterchilren TODO
                             if dataflow is not None:
-                                 dataflowID = dataflow.xpath('.//structure:DataflowID', namespaces=self.tree.nsmap)[0].text
-                                 agencyID = dataflow.xpath('.//structure:AgencyID', namespaces=self.tree.nsmap)[0].text
-                                 version = dataflow.xpath('.//structure:Version', namespaces=self.tree.nsmap)[0].text
-                                 dataflowref.append((agencyID, version,
+                                dataflowID = dataflow.xpath('.//structure:DataflowID', namespaces=self.tree.nsmap)[0].text
+                                agencyID = dataflow.xpath('.//structure:AgencyID', namespaces=self.tree.nsmap)[0].text
+                                version = dataflow.xpath('.//structure:Version', namespaces=self.tree.nsmap)[0].text
+                                dataflowref.append((agencyID, version,
                                      dataflowID))
-                                 code.append((code_key,code_name.text,dataflowref))
+                                code.append((code_key,code_name.text,dataflowref))
                     self._category[name] = code
         return self._category
 
 
-class Organisationschemes(object): #TO TEST
+class Organisationschemes(object): 
     def __init__(self, SDMXML):
         self.tree = SDMXML
         self._organisationscheme = None
@@ -271,9 +280,23 @@ class SDMX_REST(object):
         self.sdmx_url = sdmx_url
         self.agencyID = agencyID
         self._dataflow = None
-        self._organisationscheme = None  
+        self._organisationscheme = None
+        self._wsdl = None
     
-    def dataflow(self,resourceID = None): #ok
+    @property
+    def data_wsdl(self): 
+        if not self._wsdl:
+            #pdb.set_trace()
+            resource = 'services'
+            flowRef= 'SDMXQuery?wsdl'
+            url = (self.sdmx_url + '/'
+            + resource + '/'
+            + flowRef )
+            self._wsdl = Wsdl(query_rest(url))    
+        return self._wsdl
+
+
+    def dataflow(self,resourceID = None): 
         if not self._dataflow:
             if resourceID is not None :
                 resource = 'Dataflow'
@@ -289,7 +312,7 @@ class SDMX_REST(object):
         return self._dataflow
 
     @property
-    def data_organisationscheme(self): #in progress
+    def data_organisationscheme(self): 
         if not self._organisationscheme:
             resource = 'OrganisationScheme'  
             url = (self.sdmx_url + '/'
@@ -298,7 +321,7 @@ class SDMX_REST(object):
         return self._organisationscheme
 
     def data_extraction(self, flowRef, freq, key,  startperiod=None,
-            endperiod=None):#ok
+            endperiod=None):
         resourcetype = 'GenericData'
         resource ='dataflow'
         if freq is not None and startperiod is not None and endperiod is not None :
@@ -318,7 +341,7 @@ class SDMX_REST(object):
         url = (query)
         return Data(query_rest(url))
 
-    def data_concept(self, flowRef=None):#done
+    def data_concept(self, flowRef=None):
         resource = 'Concept'
         if flowRef is not None :
             url = (self.sdmx_url + '/'
@@ -330,7 +353,7 @@ class SDMX_REST(object):
                + resource) 
         return Concept(query_rest(url))
 
-    def data_codelist(self, flowRef):#done
+    def data_codelist(self, flowRef):
         resource = 'CodeList'
         url = (self.sdmx_url + '/'
                + resource + '/' 
@@ -338,7 +361,7 @@ class SDMX_REST(object):
                +self.agencyID)
         return Codelist(query_rest(url))
 
-    def data_keyfamily(self, flowRef=None):#done
+    def data_keyfamily(self, flowRef=None):
         resource = 'KeyFamily'
         if flowRef is not None :
             url = (self.sdmx_url + '/'
@@ -349,7 +372,7 @@ class SDMX_REST(object):
                + resource) 
         return Keyfamily(query_rest(url))
 
-    def data_categoryscheme(self, flowRef=None):#done
+    def data_categoryscheme(self, flowRef=None):
         resource = 'CategoryScheme'
         if flowRef is not None :
             url = (self.sdmx_url + '/'
@@ -359,14 +382,9 @@ class SDMX_REST(object):
             url = (self.sdmx_url + '/'
                + resource) 
         return Categoryscheme(query_rest(url))
-
-    def data_definition(self, flowRef):#todo
-        resource = 'CodeList'
-        url = (self.sdmx_url + '/'
-               + resource + '/' 
-               + flowRef)
-        return DSD(query_rest(url))
+    
 
 
 ECB = SDMX_REST('http://sdw-ws.ecb.europa.eu','ECB')
-
+toto=ECB.data_wsdl
+print(toto.wsdldata)
