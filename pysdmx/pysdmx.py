@@ -9,7 +9,6 @@ import uuid
 import datetime
 import numpy
 
-
 def date_parser(date, frequency):
     if frequency == 'A':
         return datetime.datetime.strptime(date, '%Y')
@@ -138,6 +137,21 @@ class Data(object):
                     self._time_series[str(uuid.uuid1())] = (codes, time_series_)
         return self._time_series
 
+class Wsdl(object): 
+    def __init__(self, SDMXML):
+        self.tree = SDMXML
+        self._wsdldata = None
+    @property
+    def wsdldata(self):  
+        if not self._wsdldata:
+            self._wsdldata = {}
+            for message in self.tree.iterfind(".//xsd:schema",namespaces={'xsd':self.tree.nsmap['xsd']}):
+                for part in  message.iterfind('.//xsd:import',
+                        namespaces={'xsd':self.tree.nsmap['xsd']}):
+                    namespace = part.get('namespace')
+                    schemalocation= part.get('schemaLocation')
+                    self._wsdldata[namespace] = (namespace,schemalocation)
+        return self._wsdldata
 
 class Concept(object):  
     def __init__(self, SDMXML):
@@ -216,12 +230,12 @@ class Categoryscheme(object):
                         dataflowref=[]
                         for dataflow in code_.iterfind(".//structure:DataflowRef", namespaces=self.tree.nsmap): #iterchilren TODO
                             if dataflow is not None:
-                                 dataflowID = dataflow.xpath('.//structure:DataflowID', namespaces=self.tree.nsmap)[0].text
-                                 agencyID = dataflow.xpath('.//structure:AgencyID', namespaces=self.tree.nsmap)[0].text
-                                 version = dataflow.xpath('.//structure:Version', namespaces=self.tree.nsmap)[0].text
-                                 dataflowref.append((agencyID, version,
+                                dataflowID = dataflow.xpath('.//structure:DataflowID', namespaces=self.tree.nsmap)[0].text
+                                agencyID = dataflow.xpath('.//structure:AgencyID', namespaces=self.tree.nsmap)[0].text
+                                version = dataflow.xpath('.//structure:Version', namespaces=self.tree.nsmap)[0].text
+                                dataflowref.append((agencyID, version,
                                      dataflowID))
-                                 code.append((code_key,code_name.text,dataflowref))
+                                code.append((code_key,code_name.text,dataflowref))
                     self._category[name] = code
         return self._category
 
@@ -261,8 +275,21 @@ class SDMX_REST(object):
         self.sdmx_url = sdmx_url
         self.agencyID = agencyID
         self._dataflow = None
-        self._organisationscheme = None  
+        self._organisationscheme = None
+        self._wsdl = None
     
+    @property
+    def data_wsdl(self): 
+        if not self._wsdl:
+            resource = 'services'
+            flowRef= 'SDMXQuery?wsdl'
+            url = (self.sdmx_url + '/'
+            + resource + '/'
+            + flowRef )
+            self._wsdl = Wsdl(query_rest(url))    
+        return self._wsdl
+
+
     def dataflow(self,resourceID = None): 
         if not self._dataflow:
             if resourceID is not None :
@@ -349,7 +376,7 @@ class SDMX_REST(object):
             url = (self.sdmx_url + '/'
                + resource) 
         return Categoryscheme(query_rest(url))
-
+    
 
 ECB = SDMX_REST('http://sdw-ws.ecb.europa.eu','ECB')
 
